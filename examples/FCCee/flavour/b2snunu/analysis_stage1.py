@@ -2,6 +2,11 @@ from argparse import ArgumentParser
 
 import ROOT
 
+# /eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_Zbb_ecm91_EvtGen_Bd2KsNuNu
+# /eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_Zbb_ecm91_EvtGen_Bd2KstNuNu
+# /eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_Zbb_ecm91_EvtGen_Bs2PhiNuNu
+# /eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_Zbb_ecm91_EvtGen_Lb2L1520NuNu
+# /eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_Zbb_ecm91_EvtGen_Lb2LNuNu
 
 decay_to_candidates = {
     "Bd2KstNuNu": "KPi",
@@ -15,13 +20,25 @@ decay_to_pdgids = {
     "Lb2LNuNu": ["3122", "5122"],
 }
 
-test_files = {
-    "Bd2KstNuNu": "events_000143365.root",
-    "Bs2PhiNuNu": "events_000027625.root",
-    "Lb2LNuNu": "events_000424799.root",
-}
-
 n_threads = 1
+campaign = "winter2023"
+
+if campaign == "spring2021":
+    test_files = {
+        "Bd2KstNuNu": "events_000143365.root",
+        "Bs2PhiNuNu": "events_000027625.root",
+        "Lb2LNuNu": "events_000424799.root",
+    }
+elif campaign == "winter2023":
+    test_files = {
+        "Bd2KsNuNu": "events_003812794.root",
+        "Bd2KstNuNu": "events_006158724.root",
+        "Bs2PhiNuNu": "events_005322435.root",
+        "Lb2L1520NuNu": "events_011406545.root",
+        "Lb2LNuNu": "events_000568214.root"
+    }
+else:
+    raise ValueError(f"Campaign {campaign} has no known test files.")
 
 class Analysis():
 
@@ -64,16 +81,16 @@ class Analysis():
             'p8_ee_Zuds_ecm91': dict(sample_opts),
         }
 
-        self.prod_tag = 'FCCee/spring2021/IDEA/'
+        self.prod_tag = f'FCCee/{campaign}/IDEA/'
 
         mode = 'training' if self.training else 'mva'
-        self.output_dir = f'{self.ana_args.output_dir}{mode}/{self.decay}'
+        self.output_dir = f'{self.ana_args.output_dir}/{mode}/{self.decay}'
 
         self.run_batch = self.ana_args.condor
 
-        MC_name = self.decay if self.decay!='Lb2LNuNu' else 'Lb2LbNuNu'
+        MC_name = 'Lb2LbNuNu' if (self.decay=='Lb2LNuNu' and campaign=='spring2021') else self.decay
         self.test_file = 'root://eospublic.cern.ch//eos/experiment/fcc/ee/' \
-                         'generation/DelphesEvents/spring2021/IDEA/' \
+                         f'generation/DelphesEvents/{campaign}/IDEA/' \
                          f'p8_ee_Zbb_ecm91_EvtGen_{MC_name}/{test_files[self.decay]}'
 
     def analyzers(self, dframe):
