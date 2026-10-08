@@ -12,12 +12,14 @@ decay_to_candidates = {
     "Bd2KstNuNu": "KPi",
     "Bs2PhiNuNu": "KK",
     "Lb2LNuNu": "pPi",
+    "Lb2L1520NuNu": "pK",
 }
 
 decay_to_pdgids = {
     "Bd2KstNuNu": ["313", "511"],
     "Bs2PhiNuNu": ["333", "531"],
     "Lb2LNuNu": ["3122", "5122"],
+    "Lb2LNuNu": ["3124", "5122"],
 }
 
 n_threads = 1
@@ -60,14 +62,18 @@ class Analysis():
                             help='Number of chunks (batch jobs) per sample.')
         parser.add_argument('--condor', action='store_true', default=False,
                             help='Run on HTCondor.')
+        parser.add_argument('--noMVA', default=False,
+                            help='Do not run MVA training.')
         self.ana_args, _ = parser.parse_known_args(cmdline_args['unknown'])
 
         self.decay = self.ana_args.decay
         self.candidates = decay_to_candidates[self.decay]
         self.child_pdgid, self.parent_pdgid = decay_to_pdgids[self.decay]
         self.training = self.ana_args.mva == ''
+        self.noMVA = self.ana_args.noMVA 
 
-        if not self.training:
+        # Do only train if training and not noMVA option
+        if not self.training and not noMVA:
             ROOT.gInterpreter.ProcessLine(f'''
             TMVA::Experimental::RBDT<> bdt("{self.decay}_BDT", "{self.ana_args.mva}");
             computeModel = TMVA::Experimental::Compute<18, float>(bdt);
@@ -356,7 +362,7 @@ class Analysis():
                .Define(f"True{candidates}_z0",            f"FCCAnalyses::myUtils::get_trackz0(True{candidates}_track)")
            )
 
-        if not self.training:
+        if not self.training and not noMVA:
             dframe2 = (dframe2
                # Build MVA 
                .Define("MVAVec", ROOT.computeModel, ("EVT_ThrustEmin_E",        "EVT_ThrustEmax_E",
@@ -374,6 +380,7 @@ class Analysis():
 
         return dframe2
 
+    ## Felicia: Check if all needed variables in here. 
     def output(self):
         candidates = self.candidates
         branch_list = [
